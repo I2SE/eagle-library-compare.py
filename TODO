@@ -1,0 +1,5 @@
+TODO
+====
+
+  * update test cases - especially the .out files
+  * implement test cases for eagle files with other order of the XML (which still means the same for eagle)
