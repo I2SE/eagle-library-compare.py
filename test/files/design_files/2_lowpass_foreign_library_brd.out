@@ -1,0 +1,2 @@
+part "C1206" in library "rcl" is different between brd and lbr
+could not find a corresponding lbr file for library "holes" in brd file
