@@ -1,3 +1,7 @@
+"""
+compare if the embedded libraries in the eagle CAD files (.brd or .sch) is 
+identic to the library files in the library folder
+"""
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -11,15 +15,22 @@ def usage():
     """print usage messages to the command line"""
     print("usage: ")
 
-def get_filename_to_library(library_name, libFolder):
-    for dirname, dirnames, filenames in os.walk(libFolder):
+def get_filename_to_library(library_name, lib_folder):
+    """
+    get path and filename to a library or -1 if there 
+    is no library file for the library
+    """
+    for (dirname, _, filenames) in os.walk(lib_folder):
         for filename in filenames:
-              file = filename.split('.')
-              if file[0]==library_name:
-                  return os.path.join(dirname, filename)
+            filename_split = filename.split('.')
+            if filename_split[0] == library_name:
+                return os.path.join(dirname, filename)
     return -1
 
 def get_drawing_from_filename(eagle_file):
+    """
+    open eagle file and get drawing subtree
+    """
     tree = ET.ElementTree(file=eagle_file)
     root = tree.getroot()
     drawing = root[0]
@@ -28,12 +39,18 @@ def get_drawing_from_filename(eagle_file):
     
 
 def get_library_from_filename(library_filename):
+    """
+    open eagle library file and get library subtree
+    """
     drawing_lbr = get_drawing_from_filename(library_filename)
     library = drawing_lbr.find('library')
 
     return library
 
 def compare_description(library_first, library_second):
+    """
+    compare text of description subtree of two library elements
+    """
     first_description  = library_first.find('description').text
     second_description = library_second.find('description').text
     if not first_description == second_description:
@@ -42,27 +59,85 @@ def compare_description(library_first, library_second):
     return True
 
 def compare_element_trees(tree1, tree2):
+    """
+    compare two XML Trees
+    """
     if (not ET.tostring(tree1) == ET.tostring(tree2)):
         return False
     return True
     
 
 def compare_package(package_cad, library):
+    """
+    compare package from CAD file and library
+    """
     package = library.find("packages/package[@name='" + 
                             package_cad.attrib['name'] + "']")
     return compare_element_trees(package, package_cad)
 
+def compare_packages(library_brd, library):
+    """
+    compare all packages that are in the CAD file with the ones in the 
+    library file
+    """
+    compare_results = True
+    for package_brd in library_brd.iterfind('packages/package'):
+        if compare_package(package_brd, library) == False:
+            print ("\tpackage \"" + package_brd.attrib['name'] + 
+                    "\" in library \"" + library_brd.attrib['name'] +
+                    "\" is different")
+            compare_results = False
+    return compare_results
+
 def compare_deviceset(deviceset_cad, library):
+    """
+    compare deviceset from CAD file and library
+    """
     deviceset = library.find("devicesets/deviceset[@name='" + 
                             deviceset_cad.attrib['name'] + "']")
     return compare_element_trees(deviceset, deviceset_cad)
 
+def compare_devicesets(library_brd, library):
+    """
+    compare all devicesets that are in the CAD file with the ones in the 
+    library file
+    """
+    compare_results = True
+    for deviceset_brd in library_brd.iterfind('devicesets/deviceset'):
+        if compare_deviceset(deviceset_brd, library) == False:
+            print ("\tdeviceset \"" + deviceset_brd.attrib['name'] + 
+                    "\" in library \"" + library_brd.attrib['name'] +
+                    "\" is different")
+            compare_results = False
+    return compare_results
+
 def compare_symbol(symbol_cad, library):
+    """
+    compare symbol from CAD file and library
+    """
     symbol = library.find("symbols/symbol[@name='" + 
                             symbol_cad.attrib['name'] + "']")
     return compare_element_trees(symbol, symbol_cad)
 
+def compare_symbols(library_brd, library):
+    """
+    compare all symbols that are in the CAD file with the ones in the 
+    library file
+    """
+    compare_results = True
+    for symbol_brd in library_brd.iterfind('symbols/symbol'):
+        if compare_symbol(symbol_brd, library) == False:
+            print ("\tsymbol \"" + symbol_brd.attrib['name'] + 
+                    "\" in library \"" + library_brd.attrib['name'] +
+                    "\" is different")
+            compare_results = False
+    return compare_results
+
 def check_library_identity(filename, library_folder):
+    """
+    check if the library embedded to the CAD file (filename) is identic 
+    to all libraries in the library_folder
+    """
     #initially assume that the result of the comparison is positive
     compare_results = True
   
@@ -70,18 +145,18 @@ def check_library_identity(filename, library_folder):
     drawing_brd = get_drawing_from_filename(filename)
 
     if drawing_brd.find('board'):
-      print "results for board file:"
-      design_file_search_string = 'board/libraries/library'
-      design_file = "brd"
+        print ("results for board file:")
+        design_file_search_string = 'board/libraries/library'
+        design_file = "brd"
     elif drawing_brd.find('schematic'):
-      print "results for schematic file:"
-      design_file_search_string = 'schematic/libraries/library'
-      design_file = "sch"
+        print ("results for schematic file:")
+        design_file_search_string = 'schematic/libraries/library'
+        design_file = "sch"
     else:
-      print "error: given file is not a valid eagle file!"
-      return -1
+        print ("error: given file is not a valid eagle file!")
+        return -1
 
-    #go through all libraries that are embedded in the board file
+    #go through all libraries that are embedded in the cad file
     for library_brd in drawing_brd.iterfind(design_file_search_string):
         library_filename = get_filename_to_library(library_brd.attrib['name'],
                                                     library_folder)
@@ -95,36 +170,22 @@ def check_library_identity(filename, library_folder):
                       library_brd.attrib['name'] + "\" is different")
                 compare_results = False
             #go through all packages and compare them one by one
-            for package_brd in library_brd.iterfind('packages/package'):
-                if compare_package(package_brd, library) == False:
-                    print ("\tpackage \"" + package_brd.attrib['name'] + 
-                            "\" in library \"" + library_brd.attrib['name'] +
-                            "\" is different")
-                    compare_results = False
+            if compare_packages(library_brd, library) == False:
+                compare_results = False
             if design_file == "sch":
                 #compare devicesets
-                for deviceset_brd in library_brd.iterfind('devicesets/deviceset'):
-                    if compare_deviceset(deviceset_brd, library) == False:
-                        print ("\tdeviceset \"" + deviceset_brd.attrib['name'] + 
-                                "\" in library \"" + library_brd.attrib['name'] +
-                                "\" is different")
-                        compare_results = False
+                if compare_devicesets(library_brd, library) == False:
+                    compare_results = False
                 #compare symbols
-                for symbol_brd in library_brd.iterfind('symbols/symbol'):
-                    if compare_symbol(symbol_brd, library) == False:
-                        print ("\tsymbol \"" + deviceset_brd.attrib['name'] + 
-                                "\" in library \"" + library_brd.attrib['name'] +
-                                "\" is different")
-                        compare_results = False
-
-                #TODO: implement check for symbols and devicesets
+                if compare_symbols(library_brd, library) == False:
+                    compare_results = False
         else:
             print ("\tcould not find a corresponding lbr file for library \"" + 
                     library_brd.attrib['name'] + "\"")
             compare_results = False
 
     if (compare_results == True):
-      print ("\tno differences found")
+        print ("\tno differences found")
     return compare_results
 
 def parse_command_line_arguments(argv):
@@ -167,9 +228,11 @@ def main(argv):
     sch_status = True
 
     if ('in_filename_brd' in settings):
-        brd_status = check_library_identity(settings['in_filename_brd'], settings['library_path'])
+        brd_status = check_library_identity(
+                        settings['in_filename_brd'], settings['library_path'])
     if ('in_filename_sch' in settings):
-        sch_status = check_library_identity(settings['in_filename_sch'], settings['library_path'])
+        sch_status = check_library_identity(
+                        settings['in_filename_sch'], settings['library_path'])
 
     if brd_status == True and sch_status == True:
         return 0
