@@ -1,2 +1,3 @@
-part "C1206" in library "rcl" is different between sch and lbr
-could not find a corresponding lbr file for library "holes" in sch file
+results for schematic file:
+	package "C1206" in library "rcl" is different
+	could not find a corresponding lbr file for library "holes"

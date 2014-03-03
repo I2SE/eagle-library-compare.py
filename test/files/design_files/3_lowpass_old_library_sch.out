@@ -1,2 +1,6 @@
-description of library "pinhead" is different between sch and lbr
-part "C1206" in library "rcl" is different between sch and lbr
+results for schematic file:
+	the description of library "pinhead" is different
+	package "1X02/90" in library "pinhead" is different
+	deviceset "PINHD-1X2" in library "pinhead" is different
+	symbol "PINHD2" in library "pinhead" is different
+	package "C1206" in library "rcl" is different

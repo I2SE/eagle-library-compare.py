@@ -1,2 +1,3 @@
-description of library "pinhead" is different between brd and lbr
-part "C1206" in library "rcl" is different between brd and lbr
+results for board file:
+	the description of library "pinhead" is different
+	package "C1206" in library "rcl" is different
